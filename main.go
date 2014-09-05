@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"github.com/nsf/termbox-go"
+	ircevent "github.com/thoj/go-ircevent"
 )
 
 const cdef = termbox.ColorDefault
@@ -9,6 +11,8 @@ const cdef = termbox.ColorDefault
 var tb TextBox = TextBox{}
 
 var clb ChatLogBox = ChatLogBox{}
+
+var room = flag.String("room", "paked", "Room you want to join")
 
 type TextBox struct {
 	Content string
@@ -81,6 +85,31 @@ func main() {
 	}
 
 	defer termbox.Close()
+
+	irc := ircevent.IRC("paked", "paked")
+	// irc.Password = *ircPassword
+	err = irc.Connect("irc.freenode.net:6667")
+
+	if err != nil {
+		log.Fatalln("Could not connect to server")
+	}
+
+	// When we've connected to the IRC server, go join the room!
+	log.Println("Connected: ", *stream)
+	irc.AddCallback("001", func(e *ircevent.Event) {
+		irc.Join("paked")
+	})
+
+	irc.AddCallback("JOIN", func(e *ircevent.Event) {
+		log.Println("[{ME}] Listening to your chat")
+	})
+
+	// Check each message to see if it contains a URL, and return the title
+	irc.AddCallback("PRIVMSG", func(e *ircevent.Event) {
+		log.Printf("[%v] %v", e.Nick, e.Message())
+	})
+
+	go irc.Loop()
 
 	_, h := termbox.Size()
 
