@@ -86,27 +86,27 @@ func main() {
 
 	defer termbox.Close()
 
-	irc := ircevent.IRC("paked", "paked")
-	// irc.Password = *ircPassword
+	irc := ircevent.IRC("heyoitsmeabot", "paked")
 	err = irc.Connect("irc.freenode.net:6667")
 
 	if err != nil {
-		log.Fatalln("Could not connect to server")
+		panic(err)
 	}
 
 	// When we've connected to the IRC server, go join the room!
-	log.Println("Connected: ", *stream)
 	irc.AddCallback("001", func(e *ircevent.Event) {
-		irc.Join("paked")
+		clb.AddMessage("joining devsofa")
+		irc.Join("devsofa")
 	})
 
 	irc.AddCallback("JOIN", func(e *ircevent.Event) {
-		log.Println("[{ME}] Listening to your chat")
+		clb.AddMessage("Joined finally")
+		tb.Content = "JOINED"
 	})
 
 	// Check each message to see if it contains a URL, and return the title
 	irc.AddCallback("PRIVMSG", func(e *ircevent.Event) {
-		log.Printf("[%v] %v", e.Nick, e.Message())
+		// log.Printf("[%v] %v", e.Nick, e.Message())
 	})
 
 	go irc.Loop()
@@ -122,12 +122,13 @@ func main() {
 
 	clb.SetPos(0, 0)
 
-	clb.AddMessage("Hey boys")
-	clb.AddMessage("Hey man")
+	// clb.AddMessage("Hey boys")
+	// clb.AddMessage("Hey man")
 
 	// draw_all()
 	running := true
 	for running {
+		// clb.AddMessage("yolo")
 		draw_all()
 		// log.Println("hey")
 		ev := termbox.PollEvent()
@@ -147,6 +148,8 @@ func main() {
 			}
 		case termbox.EventResize:
 			draw_all()
+		default:
 		}
+
 	}
 }
