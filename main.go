@@ -6,7 +6,9 @@ import (
 
 const cdef = termbox.ColorDefault
 
-var tb TextBox = TextBox{"", 10, 10, 0}
+var tb TextBox = TextBox{}
+
+var clb ChatLogBox = ChatLogBox{}
 
 type TextBox struct {
 	Content string
@@ -26,16 +28,33 @@ func (t *TextBox) InsertRune(o rune) {
 
 func (t *TextBox) DeleteRune() {
 	newLength := len(t.Content) - 1
-	newContent := ""
-	for i := 0; i < newLength; i++ {
-		newContent += string(t.Content[i])
-	}
-
-	t.Content = newContent
+	t.Content = t.Content[0:newLength]
 }
 
 func (t *TextBox) Draw() {
 	drawString(t.X, t.Y, t.Content)
+}
+
+type ChatLogBox struct {
+	Content []string
+	X       int
+	Y       int
+}
+
+func (cl *ChatLogBox) SetPos(x int, y int) {
+	cl.X = x
+	cl.Y = y
+}
+
+func (cl *ChatLogBox) AddMessage(msg string) {
+	cl.Content = append(cl.Content, msg)
+}
+
+func (cl *ChatLogBox) Draw() {
+	// w, h := termbox.Size()
+	for i := 0; i < len(cl.Content); i++ {
+		drawString(cl.X, cl.Y+i, cl.Content[i])
+	}
 }
 
 func drawString(x int, y int, str string) {
@@ -48,9 +67,8 @@ func drawString(x int, y int, str string) {
 func draw_all() {
 	termbox.Clear(cdef, cdef)
 
-	// termbox.SetCell(midx, midy, rune('o'), cdef, cdef)
-
 	tb.Draw()
+	clb.Draw()
 
 	termbox.Flush()
 }
@@ -72,6 +90,11 @@ func main() {
 	tb.InsertRune(' ')
 	tb.InsertRune('b')
 	tb.InsertRune('c')
+
+	clb.SetPos(0, 0)
+
+	clb.AddMessage("Hey boys")
+	clb.AddMessage("Hey man")
 
 	// draw_all()
 	running := true
