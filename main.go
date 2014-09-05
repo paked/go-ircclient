@@ -2,15 +2,11 @@ package main
 
 import (
 	"github.com/nsf/termbox-go"
-	// "strings"
-	// "log"
 )
 
 const cdef = termbox.ColorDefault
 
 var tb TextBox = TextBox{"", 10, 10, 0}
-
-var bottom string = ""
 
 type TextBox struct {
 	Content string
