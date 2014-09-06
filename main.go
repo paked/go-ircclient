@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/nsf/termbox-go"
 	ircevent "github.com/thoj/go-ircevent"
+	"log"
 )
 
 const cdef = termbox.ColorDefault
@@ -12,7 +13,11 @@ var tb TextBox = TextBox{}
 
 var clb ChatLogBox = ChatLogBox{}
 
-var room = flag.String("room", "paked", "Room you want to join")
+var room = flag.String("room", "#pakedtheking", "Room you want to join")
+var irc = ircevent.IRC("adwdwandba", "adwdwandba")
+
+// var running = make(chan bool)
+var done = make(chan bool)
 
 type TextBox struct {
 	Content string
@@ -31,8 +36,14 @@ func (t *TextBox) InsertRune(o rune) {
 }
 
 func (t *TextBox) DeleteRune() {
-	newLength := len(t.Content) - 1
-	t.Content = t.Content[0:newLength]
+	length := len(t.Content)
+	if length != 0 {
+		t.Content = t.Content[0:(length - 1)]
+	}
+}
+
+func (t *TextBox) Clear() {
+	t.Content = ""
 }
 
 func (t *TextBox) Draw() {
@@ -61,6 +72,10 @@ func (cl *ChatLogBox) Draw() {
 	}
 }
 
+func (cl *ChatLogBox) Format(nick string, msg string) string {
+	return "[" + nick + "] " + msg
+}
+
 func drawString(x int, y int, str string) {
 	length := len(str)
 	for i := 0; i < length; i++ {
@@ -86,7 +101,6 @@ func main() {
 
 	defer termbox.Close()
 
-	irc := ircevent.IRC("heyoitsmeabot", "paked")
 	err = irc.Connect("irc.freenode.net:6667")
 
 	if err != nil {
@@ -95,21 +109,17 @@ func main() {
 
 	// When we've connected to the IRC server, go join the room!
 	irc.AddCallback("001", func(e *ircevent.Event) {
-		clb.AddMessage("joining devsofa")
-		irc.Join("devsofa")
+		clb.AddMessage("joining " + *room)
+		irc.Join(*room)
 	})
 
 	irc.AddCallback("JOIN", func(e *ircevent.Event) {
 		clb.AddMessage("Joined finally")
-		tb.Content = "JOINED"
 	})
 
-	// Check each message to see if it contains a URL, and return the title
 	irc.AddCallback("PRIVMSG", func(e *ircevent.Event) {
-		// log.Printf("[%v] %v", e.Nick, e.Message())
+		clb.AddMessage(clb.Format(e.Nick, e.Message()))
 	})
-
-	go irc.Loop()
 
 	_, h := termbox.Size()
 
@@ -121,35 +131,62 @@ func main() {
 	tb.InsertRune('c')
 
 	clb.SetPos(0, 0)
+	go drawLoop()
+	eventLoop()
 
-	// clb.AddMessage("Hey boys")
-	// clb.AddMessage("Hey man")
+	go irc.Loop()
+}
 
-	// draw_all()
+func drawLoop() {
 	running := true
 	for running {
-		// clb.AddMessage("yolo")
 		draw_all()
-		// log.Println("hey")
+		select {
+		case <-done:
+			log.Println("DONE YET?")
+			running = false
+		default:
+		}
+	}
+
+	log.Println("DCX")
+}
+
+func eventLoop() {
+	running := true
+	for running {
 		ev := termbox.PollEvent()
 		switch ev.Type {
 		case termbox.EventKey:
 			switch ev.Key {
 			case termbox.KeyEsc:
 				running = false
+				done <- true
+
 			case termbox.KeySpace:
 				tb.InsertRune(' ')
+
 			case termbox.KeyBackspace2:
 				tb.DeleteRune()
+
+			case termbox.KeyEnter:
+				clb.AddMessage(clb.Format(irc.GetNick(), tb.Content))
+				irc.Privmsg(*room, tb.Content)
+				tb.Clear()
+
 			default:
 				if ev.Ch != 0 {
 					tb.InsertRune(ev.Ch)
 				}
 			}
+
 		case termbox.EventResize:
 			draw_all()
 		default:
 		}
-
 	}
+
+	termbox.Close()
+
+	log.Println("DCS")
 }
