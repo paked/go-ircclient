@@ -9,6 +9,9 @@ import (
 
 const cdef = termbox.ColorDefault
 
+const MSG_NOTIF = "1"
+const MSG_NORM = "0"
+
 var tb TextBox = TextBox{}
 
 var clb ChatLogBox = ChatLogBox{}
@@ -16,7 +19,6 @@ var clb ChatLogBox = ChatLogBox{}
 var room = flag.String("room", "#pakedtheking", "Room you want to join")
 var irc = ircevent.IRC("adwdwandba", "adwdwandba")
 
-// var running = make(chan bool)
 var done = make(chan bool)
 
 type TextBox struct {
@@ -51,7 +53,7 @@ func (t *TextBox) Draw() {
 }
 
 type ChatLogBox struct {
-	Content []string
+	Content []ChatLogMessage
 	X       int
 	Y       int
 }
@@ -61,19 +63,45 @@ func (cl *ChatLogBox) SetPos(x int, y int) {
 	cl.Y = y
 }
 
-func (cl *ChatLogBox) AddMessage(msg string) {
+func (cl *ChatLogBox) AddMessage(msg ChatLogMessage) {
 	cl.Content = append(cl.Content, msg)
 }
 
 func (cl *ChatLogBox) Draw() {
 	// w, h := termbox.Size()
 	for i := 0; i < len(cl.Content); i++ {
-		drawString(cl.X, cl.Y+i, cl.Content[i])
+		cl.DrawMessage(cl.X, cl.Y+i, cl.Content[i])
 	}
 }
 
-func (cl *ChatLogBox) Format(nick string, msg string) string {
-	return "[" + nick + "] " + msg
+type ChatLogMessage struct {
+	Message string
+	Nick    string
+	Type    string
+}
+
+func (cl *ChatLogBox) format(msg ChatLogMessage) string {
+	str := ""
+	if msg.Type == MSG_NORM {
+		str = "[" + msg.Nick + "] " + msg.Message
+	} else if msg.Type == MSG_NOTIF {
+		str = msg.Message
+	}
+	return str
+}
+
+func (cl *ChatLogBox) DrawMessage(x int, y int, msg ChatLogMessage) {
+	str := cl.format(msg)
+	length := len(str)
+	colourOne := termbox.ColorDefault
+	colourTwo := colourOne
+	if msg.Type == MSG_NOTIF {
+		colourOne = termbox.ColorMagenta
+	}
+
+	for i := 0; i < length; i++ {
+		termbox.SetCell(x+i, y, rune(str[i]), colourOne, colourTwo)
+	}
 }
 
 func drawString(x int, y int, str string) {
@@ -109,26 +137,26 @@ func main() {
 
 	// When we've connected to the IRC server, go join the room!
 	irc.AddCallback("001", func(e *ircevent.Event) {
-		clb.AddMessage("joining " + *room)
+		clb.AddMessage(ChatLogMessage{"Joining " + *room, "", MSG_NOTIF})
 		irc.Join(*room)
 	})
 
 	irc.AddCallback("JOIN", func(e *ircevent.Event) {
-		clb.AddMessage("Joined finally")
+		clb.AddMessage(ChatLogMessage{"Successfully joined " + *room, "", MSG_NOTIF})
 	})
 
 	irc.AddCallback("PRIVMSG", func(e *ircevent.Event) {
-		clb.AddMessage(clb.Format(e.Nick, e.Message()))
+		clb.AddMessage(ChatLogMessage{e.Message(), e.Nick, MSG_NORM})
 	})
 
 	_, h := termbox.Size()
 
 	tb.SetPos(0, h-1)
 
-	tb.InsertRune('a')
-	tb.InsertRune(' ')
-	tb.InsertRune('b')
-	tb.InsertRune('c')
+	// tb.InsertRune('a')
+	// tb.InsertRune(' ')
+	// tb.InsertRune('b')
+	// tb.InsertRune('c')
 
 	clb.SetPos(0, 0)
 	go drawLoop()
@@ -170,7 +198,8 @@ func eventLoop() {
 				tb.DeleteRune()
 
 			case termbox.KeyEnter:
-				clb.AddMessage(clb.Format(irc.GetNick(), tb.Content))
+				// clb.AddMessage(clb.Format(irc.GetNick(), tb.Content))
+				clb.AddMessage(ChatLogMessage{tb.Content, irc.GetNick(), MSG_NORM})
 				irc.Privmsg(*room, tb.Content)
 				tb.Clear()
 
