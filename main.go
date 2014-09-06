@@ -117,6 +117,10 @@ func draw_all() {
 	tb.Draw()
 	clb.Draw()
 
+	_, h := termbox.Size()
+
+	drawString(0, h-1, "->")
+
 	termbox.Flush()
 }
 
@@ -151,12 +155,7 @@ func main() {
 
 	_, h := termbox.Size()
 
-	tb.SetPos(0, h-1)
-
-	// tb.InsertRune('a')
-	// tb.InsertRune(' ')
-	// tb.InsertRune('b')
-	// tb.InsertRune('c')
+	tb.SetPos(3, h-1)
 
 	clb.SetPos(0, 0)
 	go drawLoop()
