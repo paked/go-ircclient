@@ -165,7 +165,7 @@ func main() {
 	go drawLoop()
 	eventLoop()
 
-	// go irc.Loop()
+	go irc.Loop()
 }
 
 func drawLoop() {
