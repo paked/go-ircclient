@@ -18,10 +18,12 @@ var (
 	tb     TextBox
 	clb    ChatLogBox
 	locked bool
+	irc    *ircevent.Connection
 
-	room = flag.String("room", "#pakedtheking", "Room you want to join")
-	irc  = ircevent.IRC("adwdwandba", "adwdwandba")
-	done = make(chan bool)
+	room   = flag.String("room", "#pakedtheking", "Room you want to join")
+	user   = flag.String("username", "go-ircclient-user", "Your desired username")
+	server = flag.String("server", "irc.freenode.net:6667", "Server your want to connect to (with port.)")
+	done   = make(chan bool)
 )
 
 type TextBox struct {
@@ -134,11 +136,14 @@ func main() {
 		panic(err)
 	}
 
+	flag.Parse()
+
 	defer termbox.Close()
 	locked = true
-	err = irc.Connect("irc.freenode.net:6667")
-	clb.AddMessage(ChatLogMessage{"Connecting to freenode", "", MSG_NOTIF})
+	irc = ircevent.IRC(*user, *user)
+	err = irc.Connect(*server)
 
+	clb.AddMessage(ChatLogMessage{"Connecting to " + *server, "", MSG_NOTIF})
 	if err != nil {
 		panic(err)
 	}
