@@ -5,21 +5,24 @@ import (
 	"github.com/nsf/termbox-go"
 	ircevent "github.com/thoj/go-ircevent"
 	"log"
+	"os"
 )
 
-const cdef = termbox.ColorDefault
+const (
+	cdef      = termbox.ColorDefault
+	MSG_NOTIF = "1"
+	MSG_NORM  = "0"
+)
 
-const MSG_NOTIF = "1"
-const MSG_NORM = "0"
+var (
+	tb     TextBox
+	clb    ChatLogBox
+	locked bool
 
-var tb TextBox = TextBox{}
-
-var clb ChatLogBox = ChatLogBox{}
-
-var room = flag.String("room", "#pakedtheking", "Room you want to join")
-var irc = ircevent.IRC("adwdwandba", "adwdwandba")
-
-var done = make(chan bool)
+	room = flag.String("room", "#pakedtheking", "Room you want to join")
+	irc  = ircevent.IRC("adwdwandba", "adwdwandba")
+	done = make(chan bool)
+)
 
 type TextBox struct {
 	Content string
@@ -146,6 +149,7 @@ func main() {
 	})
 
 	irc.AddCallback("JOIN", func(e *ircevent.Event) {
+
 		clb.AddMessage(ChatLogMessage{"Successfully joined " + *room, "", MSG_NOTIF})
 	})
 
@@ -161,7 +165,7 @@ func main() {
 	go drawLoop()
 	eventLoop()
 
-	go irc.Loop()
+	// go irc.Loop()
 }
 
 func drawLoop() {
@@ -197,7 +201,6 @@ func eventLoop() {
 				tb.DeleteRune()
 
 			case termbox.KeyEnter:
-				// clb.AddMessage(clb.Format(irc.GetNick(), tb.Content))
 				clb.AddMessage(ChatLogMessage{tb.Content, irc.GetNick(), MSG_NORM})
 				irc.Privmsg(*room, tb.Content)
 				tb.Clear()
@@ -215,6 +218,5 @@ func eventLoop() {
 	}
 
 	termbox.Close()
-
-	log.Println("DCS")
+	os.Exit(0)
 }
