@@ -135,21 +135,21 @@ func main() {
 	}
 
 	defer termbox.Close()
-
+	locked = true
 	err = irc.Connect("irc.freenode.net:6667")
+	clb.AddMessage(ChatLogMessage{"Connecting to freenode", "", MSG_NOTIF})
 
 	if err != nil {
 		panic(err)
 	}
 
-	// When we've connected to the IRC server, go join the room!
 	irc.AddCallback("001", func(e *ircevent.Event) {
 		clb.AddMessage(ChatLogMessage{"Joining " + *room, "", MSG_NOTIF})
 		irc.Join(*room)
 	})
 
 	irc.AddCallback("JOIN", func(e *ircevent.Event) {
-
+		locked = false
 		clb.AddMessage(ChatLogMessage{"Successfully joined " + *room, "", MSG_NOTIF})
 	})
 
@@ -179,8 +179,6 @@ func drawLoop() {
 		default:
 		}
 	}
-
-	log.Println("DCX")
 }
 
 func eventLoop() {
@@ -195,18 +193,22 @@ func eventLoop() {
 				done <- true
 
 			case termbox.KeySpace:
-				tb.InsertRune(' ')
+				if !locked {
+					tb.InsertRune(' ')
+				}
 
 			case termbox.KeyBackspace2:
 				tb.DeleteRune()
 
 			case termbox.KeyEnter:
-				clb.AddMessage(ChatLogMessage{tb.Content, irc.GetNick(), MSG_NORM})
-				irc.Privmsg(*room, tb.Content)
-				tb.Clear()
+				if !locked {
+					clb.AddMessage(ChatLogMessage{tb.Content, irc.GetNick(), MSG_NORM})
+					irc.Privmsg(*room, tb.Content)
+					tb.Clear()
+				}
 
 			default:
-				if ev.Ch != 0 {
+				if ev.Ch != 0 && !locked {
 					tb.InsertRune(ev.Ch)
 				}
 			}
